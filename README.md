@@ -1,3 +1,6 @@
+最新はここ  
+https://github.com/Night-yap/sound-cloud_or_You-tube-View/releases/tag/v1.0.0  
+  
 プログラムの公開にあたって、以下の点を明記します。  
   
 本プログラムは自由に使用・配布・書き換えができますが、使用に関する全てのリスクはユーザーが負うものとします。  
