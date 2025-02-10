@@ -1,10 +1,12 @@
 import sys
+import os 
 import psutil
 import pygetwindow as gw
 import pyautogui
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QSlider, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QSlider, QVBoxLayout ,QSystemTrayIcon , QMenu ,QAction
 from PyQt5.QtCore import Qt, QTimer, QPoint
-from PyQt5.QtGui import QFont, QColor, QPainter, QBrush
+from PyQt5.QtGui import QFont, QColor, QPainter, QBrush , QIcon
+
 
 # 実行中のメディアプレーヤーを探し、そのタイトルを取得
 def get_media_info():
@@ -16,6 +18,13 @@ def get_media_info():
                 return windows[0].title
     return "nothing"
 
+# PyInstallerでのリソースパス取得関数
+def resource_path(relative_path):
+    """リソースファイルのパスを取得する関数"""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 # メディア制御関数（再生、停止、次の曲）
 def control_media(action):
     if action == "play_pause":
@@ -25,7 +34,34 @@ def control_media(action):
     elif action == "previous":
         pyautogui.press('prevtrack')  # 前の曲
 
-class SettingsWindow(QWidget):
+class SetIcon(QWidget):
+    def __init__(self):
+        super().__init__()
+        
+        # 画像のパスを取得
+        icon_path = resource_path('images/myimage.png')
+        
+        #システムトレイアイコンを作成
+        self.tray_icon = QSystemTrayIcon(self)
+        #アイコン画像のパスを指定
+        #icon_path = "python.png"
+        self.tray_icon.setIcon(QIcon(icon_path))
+        self.tray_icon.setToolTip("Python test APP Running")
+        #システムトレイにメニューを作成
+        tray_menu = QMenu()
+        #アクション「終了」をメニューに追加
+        exit_action = QAction("プログラム終了",self)
+        exit_action.triggered.connect(self.exit_program)
+        tray_menu.addAction(exit_action)
+        #メニューをシステムトレイアイコンに設定
+        self.tray_icon.setContextMenu(tray_menu)
+        #システムトレイアイコンを表示
+        self.tray_icon.show()
+    def exit_program(self):
+        """プログラムを終了する"""
+        QApplication.quit()
+
+class SettingsWindow(QWidget):     #スライダーウィンドウ
     def __init__(self, overlay):
         super().__init__()
 
@@ -39,6 +75,7 @@ class SettingsWindow(QWidget):
         bg_color_value = self.overlay.background_color.alpha()  # 背景色の不透明度
         tx_speed_value = self.overlay.scroll_speed  # スクロール速度
         tx_sleep_value = self.overlay.pause_duration_N  # 変更なし���り再生時間
+        #ボタンの色バック色透明度
 
         # 背景色を変更するスライダー（0が黒、255が白）
         self.bg_slider = QSlider(Qt.Horizontal, self)
@@ -74,6 +111,10 @@ class SettingsWindow(QWidget):
         self.pause_duration_slinder.setMaximum(10)
         self.pause_duration_slinder.setValue(tx_sleep_value)  # 初期値
         self.pause_duration_slinder.valueChanged.connect(self.change_pause_duration_timer)
+        
+        #ボタン
+        #self.window_move_button = QPushButton("Toggle")
+        #self.window_move_button.clicked.connect(self.toggle_flag)
 
 
 
@@ -107,12 +148,25 @@ class SettingsWindow(QWidget):
         self.overlay.update_pause_duration_timer(value)
 
 
-class OverlayWindow(QWidget):
+class OverlayWindow(QWidget):               #初期ウィンドウ設定
     def __init__(self):
         super().__init__()
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
+        self.setWindowFlags(self.windowFlags() |Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        # マウス入力を無効にする
+        #self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        # 常に最前面に表示する設定
+        #self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        
+        
+        
         self.setGeometry(100, 100, 500, 100)
+        
+        #exe内部の画像パスを取得
+        image_path = resource_path("images/myimage.png")
+        
+        self.setWindowIcon(QIcon(image_path))#アイコンファイルのパス指定()
         
         # 初期の背景色（黒に透明度160）と文字色（白）
         self.background_color = QColor(0, 0, 0, 160)
@@ -141,29 +195,42 @@ class OverlayWindow(QWidget):
 -------------------------------------------------------")
         self.scroll_label.move(10, 40)  # 初期位置
 
+################################################################ボタン設定乱数####################################################################################
+
         # 再生・停止ボタン
         self.play_pause_btn = QPushButton("Play/Pause", self)
         self.play_pause_btn.move(10, 70)
+        self.play_pause_btn.setFont(QFont("Arial", 10))
+        self.play_pause_btn.setStyleSheet(f"color: #ffffff; background-color: #868686;")
+        #self.play_pause_btn.setStyleSheet(f"color:{self.text_color.name()};")                                              +カラー変更
         self.play_pause_btn.clicked.connect(self.toggle_play_pause)
 
         # 次の曲ボタン
         self.next_btn = QPushButton("Next", self)
         self.next_btn.move(190, 70)
+        self.next_btn.setFont(QFont("Arial", 10))
+        self.next_btn.setStyleSheet(f"color: #ffffff; background-color: #868686;")
         self.next_btn.clicked.connect(self.skip_next)
 
         # 前の曲ボタン
         self.previous_btn = QPushButton("Previous", self)
         self.previous_btn.move(100, 70)
+        self.previous_btn.setFont(QFont("Arial", 10))
+        self.previous_btn.setStyleSheet(f"color: #ffffff; background-color: #868686;")
         self.previous_btn.clicked.connect(self.previous)
 
         # 設定ボタン
         self.settings_btn = QPushButton("設定", self)
         self.settings_btn.move(280, 70)
+        self.settings_btn.setFont(QFont("Arial", 10))
+        self.settings_btn.setStyleSheet(f"color: #ffffff; background-color: #868686;")
         self.settings_btn.clicked.connect(self.open_settings_window)
 
         #Exit
         self.Exit_btn = QPushButton("Exit", self)
         self.Exit_btn.move(370, 70)
+        self.Exit_btn.setFont(QFont("Arial", 10))
+        self.Exit_btn.setStyleSheet(f"color: #ffffff; background-color: #868686;")
         self.Exit_btn.clicked.connect(self.Exit_button)
 
         # 初期位置
@@ -293,6 +360,7 @@ def main():
     app = QApplication(sys.argv)
     overlay = OverlayWindow()
     overlay.show()
+    tray_app = SetIcon()
 
     def update_overlay():
         media_info = get_media_info()
